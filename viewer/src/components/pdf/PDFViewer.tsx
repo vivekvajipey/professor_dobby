@@ -137,8 +137,10 @@ export default function PDFViewer() {
             top: `${y * scale}px`,
             width: `${width * scale}px`,
             height: `${height * scale}px`,
-            backgroundColor: isSelected ? 'rgba(0, 120, 255, 0.2)' : 'rgba(0, 0, 255, 0.1)',
-            border: isSelected ? '2px solid rgba(0, 120, 255, 0.8)' : '1px solid transparent',
+            backgroundColor: 'transparent', // Fully transparent background
+            border: isSelected
+              ? '2px solid rgba(0, 120, 255, 0.8)'
+              : '1px solid rgba(0, 0, 255, 0.6)',
             cursor: 'pointer',
             transition: 'all 0.2s ease-in-out',
             zIndex: isSelected ? 2 : 1,
@@ -148,7 +150,7 @@ export default function PDFViewer() {
             <div
               key={block.id}
               style={style}
-              className="hover:bg-blue-200/20 hover:border-blue-400"
+              className="hover:border-blue-800"
               onClick={() => handleBlockClick(block)}
               title={block.html?.replace(/<[^>]*>/g, '') || ''}
             />
