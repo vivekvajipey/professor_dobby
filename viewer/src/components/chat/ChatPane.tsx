@@ -35,7 +35,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   const [model, setModel] = useState<DobbyModel>('leashed');
   
   // State for tracking width
-  const [width, setWidth] = useState(384); // 384px = w-96 default
+  const [width, setWidth] = useState(480); // Increased from 384px to 480px
   const [isResizing, setIsResizing] = useState(false);
 
   // Update block conversations whenever messages change
@@ -155,8 +155,8 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   const handleMouseMove = (e: MouseEvent) => {
     if (!isResizing) return;
     const newWidth = window.innerWidth - e.clientX;
-    // Constrain width between 320px and 640px
-    setWidth(Math.min(Math.max(320, newWidth), 640));
+    // Updated min/max width constraints
+    setWidth(Math.min(Math.max(400, newWidth), 800)); // Increased min from 320 to 400, max from 640 to 800
   };
 
   const handleMouseUp = () => {
