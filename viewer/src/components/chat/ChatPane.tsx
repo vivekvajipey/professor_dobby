@@ -41,7 +41,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingModel, setLoadingModel] = useState<DobbyModel | null>(null);
-  const [model, setModel] = useState<DobbyModel>('leashed');
+  const [model, setModel] = useState<DobbyModel>('unhinged');
   
   // State for tracking width
   const [width, setWidth] = useState(500);
@@ -163,14 +163,14 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       if (!apiKey) throw new Error("Missing Fireworks API key");
 
       // 1. Get Unhinged Dobby's thoughts
-      const unhingedSystemPrompt: Message = {
-        role: "system",
-        content: "You are Unhinged Dobby 😈. Debate Leashed Dobby about this text!",
+      const unhingedPrompt: Message = {
+        role: "user",
+        content: "Say something unhinged about this text!"
       };
 
       const unhingedResponse = await callFireworksAI(
         apiKey, 
-        [...messages, unhingedSystemPrompt], 
+        [...messages, unhingedPrompt], 
         "unhinged"
       );
 
@@ -187,14 +187,14 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       setLoadingModel('leashed');
 
       // 2. Get Leashed Dobby's response
-      const leashedSystemPrompt: Message = {
-        role: "system",
-        content: `Unhinged Dobby said: "${unhingedResponse}". Respond to these unhinged thoughts.`,
+      const leashedPrompt: Message = {
+        role: "user",
+        content: `Respond to these unhinged thoughts.`
       };
 
       const leashedResponse = await callFireworksAI(
         apiKey,
-        [...messages, unhingedMsg, leashedSystemPrompt],
+        [...messages, unhingedMsg, leashedPrompt],
         "leashed"
       );
 

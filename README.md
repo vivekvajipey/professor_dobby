@@ -2,6 +2,19 @@
 
 Read with Dobby transforms your reading experience by pairing every passage with Dobby’s insightful commentary—whether you prefer a calm, “leashed” perspective or a wild, “unhinged” debate partner. Boring or dense materials turn fun and interactive as you dive into conversational summaries, clarifications, and even playful arguments between Dobby’s two sides. It’s a fresh way to learn, simplify complex topics, and stay engaged with whatever you’re reading!
 
+## Demo Video
+
+Check out our demo video to see Read with Dobby in action:
+
+[![Read with Dobby Demo](https://img.youtube.com/vi/bLQk0J_F2q0/0.jpg)](https://www.youtube.com/watch?v=bLQk0J_F2q0)
+
+## Setup
+
+### Backend Setup
+
+1. Clone the repository:
+
+
 ## Features
 
 - **Interactive PDF Viewer**: View and navigate PDFs with ease
@@ -40,7 +53,7 @@ pip install -r requirements.txt
 
 3. Create a `.env` file in the `backend` directory:
 ```env
-DATALAB_API_KEY=your_openai_api_key
+DATALAB_API_KEY=your_datalab_api_key
 ```
 
 4. Start the backend server:

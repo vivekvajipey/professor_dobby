@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PDF Viewer",
-  description: "Advanced PDF viewer with block selection and analysis",
+  title: "Read with Dobby",
+  description: "Make reading more engaging with Dobby.",
 };
 
 export default function RootLayout({

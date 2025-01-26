@@ -209,7 +209,8 @@ export default function PDFViewer() {
       {/* Left side: PDF viewer */}
       <div className="flex-1 relative">
         {!pdfFile ? (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center flex-col gap-6">
+            <h1 className="text-4xl font-bold text-purple-600">Read with Dobby</h1>
             <input
               type="file"
               accept=".pdf"
