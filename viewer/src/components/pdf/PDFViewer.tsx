@@ -201,7 +201,7 @@ export default function PDFViewer() {
     [blocks, selectedBlock, handleBlockClick]
   );
 
-  const textBlockTypes = ["text"];
+  const textBlockTypes = ["text", "listitem"];
   const isTextBlock = selectedBlock?.block_type && textBlockTypes.includes(selectedBlock.block_type.toLowerCase());
 
   return (

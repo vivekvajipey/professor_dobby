@@ -31,6 +31,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   // The current user-typed message
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingModel, setLoadingModel] = useState<DobbyModel | null>(null);
   const [model, setModel] = useState<DobbyModel>('leashed');
   
   // State for tracking width
@@ -48,24 +49,20 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     const messageContent = messageText.trim();
     const userMsg: Message = { role: "user", content: messageContent };
     
-    // Clear input but save message content in case we need to restore it
     setNewMessage("");
     setIsLoading(true);
+    setLoadingModel(model);
 
     try {
-      // Add user message to conversation
       setMessages(prev => [...prev, userMsg]);
 
-      // Get API key from environment variable
       const apiKey = process.env.NEXT_PUBLIC_FIREWORKS_API_KEY;
       if (!apiKey) {
         throw new Error("Missing Fireworks API key");
       }
 
-      // Call Fireworks AI with the entire conversation
       const aiResponse = await callFireworksAI(apiKey, [...messages, userMsg], model);
       
-      // Add AI response to messages with the current model
       const aiMsg: Message = { 
         role: "assistant", 
         content: aiResponse,
@@ -74,12 +71,72 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
       console.error("Error getting AI response:", error);
-      // Remove the user message from history
       setMessages(prev => prev.filter((_, i) => i !== prev.length - 1));
-      // Restore the user's message to the input
       setNewMessage(messageContent);
     } finally {
       setIsLoading(false);
+      setLoadingModel(null);
+    }
+  };
+
+  const handleDobbyVsDobby = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setLoadingModel('unhinged');
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_FIREWORKS_API_KEY;
+      if (!apiKey) throw new Error("Missing Fireworks API key");
+
+      // 1. Get Unhinged Dobby's thoughts
+      const unhingedSystemPrompt: Message = {
+        role: "system",
+        content: "You are Unhinged Dobby 😈. Share your unfiltered thoughts about this text!",
+      };
+
+      const unhingedResponse = await callFireworksAI(
+        apiKey, 
+        [...messages, unhingedSystemPrompt], 
+        "unhinged"
+      );
+
+      const unhingedMsg: Message = {
+        role: "assistant",
+        content: unhingedResponse,
+        modelUsed: "unhinged"
+      };
+
+      // Update messages with unhinged response
+      setMessages(prev => [...prev, unhingedMsg]);
+
+      // Switch loading state to leashed
+      setLoadingModel('leashed');
+
+      // 2. Get Leashed Dobby's response
+      const leashedSystemPrompt: Message = {
+        role: "system",
+        content: `Unhinged Dobby said: "${unhingedResponse}". Respond to these unhinged thoughts.`,
+      };
+
+      const leashedResponse = await callFireworksAI(
+        apiKey,
+        [...messages, unhingedMsg, leashedSystemPrompt],
+        "leashed"
+      );
+
+      const leashedMsg: Message = {
+        role: "assistant",
+        content: leashedResponse,
+        modelUsed: "leashed"
+      };
+
+      // Update messages with leashed response
+      setMessages(prev => [...prev, leashedMsg]);
+    } catch (error) {
+      console.error("Error in Dobby vs. Dobby:", error);
+    } finally {
+      setIsLoading(false);
+      setLoadingModel(null);
     }
   };
 
@@ -196,6 +253,13 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
               >
                 Teach me {model === 'leashed' ? '😇' : '😈'}
               </button>
+              <button
+                onClick={handleDobbyVsDobby}
+                disabled={isLoading}
+                className="px-3 py-1.5 rounded text-sm text-white transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
+              >
+                Dobby vs. Dobby 🤼
+              </button>
             </div>
 
             {/* Message history */}
@@ -231,8 +295,12 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
             })}
             {isLoading && (
               <div className="flex justify-start">
-                <div className={`${model === 'leashed' ? 'bg-blue-100' : 'bg-red-100'} text-gray-800 p-2 rounded text-sm`}>
-                  <em>{model === 'leashed' ? 'Dobby' : 'Unhinged'} is typing...</em>
+                <div
+                  className={`${
+                    loadingModel === 'leashed' ? 'bg-blue-100' : 'bg-red-100'
+                  } text-gray-800 p-2 rounded text-sm`}
+                >
+                  <em>{loadingModel === 'leashed' ? 'Dobby 😇' : 'Dobby 😈'} is typing...</em>
                 </div>
               </div>
             )}
