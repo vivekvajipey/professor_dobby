@@ -19,9 +19,9 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       blockConversations[block.id] = [
         {
           role: "system",
-          content: `You are an AI assistant that helps the user analyze PDF blocks. The user is focusing on this block of text:\n\n${stripHtml(
+          content: `The user is reading this part of the text:\n\n${stripHtml(
             block.html
-          )}\n\nUse this information for context when answering questions.`,
+          )}\n\nUse this when answering questions.`,
         },
       ];
     }
@@ -42,17 +42,20 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     blockConversations[block.id] = messages;
   }, [messages, block.id]);
 
-  const handleSend = async () => {
-    if (!newMessage.trim() || isLoading) return;
+  const handleSend = async (messageText: string) => {
+    if (!messageText.trim() || isLoading) return;
 
-    const userMsg: Message = { role: "user", content: newMessage };
+    const messageContent = messageText.trim();
+    const userMsg: Message = { role: "user", content: messageContent };
     
-    // Immediately show user message and clear input
-    setMessages(prev => [...prev, userMsg]);
+    // Clear input but save message content in case we need to restore it
     setNewMessage("");
     setIsLoading(true);
 
     try {
+      // Add user message to conversation
+      setMessages(prev => [...prev, userMsg]);
+
       // Get API key from environment variable
       const apiKey = process.env.NEXT_PUBLIC_FIREWORKS_API_KEY;
       if (!apiKey) {
@@ -71,16 +74,17 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
       console.error("Error getting AI response:", error);
-      // Show error message in chat
-      const errorMsg: Message = {
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
-        modelUsed: model
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      // Remove the user message from history
+      setMessages(prev => prev.filter((_, i) => i !== prev.length - 1));
+      // Restore the user's message to the input
+      setNewMessage(messageContent);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleInputSend = () => {
+    handleSend(newMessage);
   };
 
   // Handle mouse events for resizing
@@ -112,7 +116,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       }
       // Submit with just Enter
       e.preventDefault();
-      handleSend();
+      handleInputSend();
     }
   };
 
@@ -141,17 +145,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       {/* Header */}
       <div className="p-3 flex items-center justify-between bg-gray-200 border-b border-gray-300">
         <div className="flex items-center gap-3">
-          <h2 className="font-semibold">Block Chat</h2>
-          <button
-            onClick={() => setModel(m => m === 'leashed' ? 'unhinged' : 'leashed')}
-            className={`px-2 py-1 rounded text-sm transition-colors ${
-              model === 'leashed' 
-                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                : 'bg-red-100 text-red-700 hover:bg-red-200'
-            }`}
-          >
-            {model === 'leashed' ? 'Dobby 😇' : 'Dobby 😈'}
-          </button>
+          <h2 className="font-semibold">Learn with Dobby</h2>
         </div>
         <button onClick={onClose} className="text-sm text-gray-700 hover:text-black">
           ✕
@@ -160,7 +154,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
 
       {/* Block Content Display */}
       <div className="p-3 border-b border-gray-300">
-        <h3 className="font-semibold mb-2">Block Content</h3>
+        <h3 className="font-semibold mb-2">Current Reading:</h3>
         <div
           className="p-2 bg-gray-50 text-gray-900 rounded text-sm 
                      overflow-auto resize-y 
@@ -170,10 +164,41 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       </div>
 
       {/* Chat area */}
-      {block.block_type.toLowerCase().includes("text") ? (
+      {block.block_type.toLowerCase() === "text" ? (
         <div className="flex-1 flex flex-col min-h-0">
           {/* Messages */}
           <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-0">
+            {/* Preset message buttons */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => handleSend("Summarize this")}
+                disabled={isLoading}
+                className={`px-3 py-1.5 rounded text-sm text-white transition-colors ${
+                  isLoading 
+                    ? `${model === 'leashed' ? 'bg-blue-400' : 'bg-red-400'} cursor-not-allowed` 
+                    : model === 'leashed'
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                Summarize {model === 'leashed' ? '😇' : '😈'}
+              </button>
+              <button
+                onClick={() => handleSend("Teach this to me")}
+                disabled={isLoading}
+                className={`px-3 py-1.5 rounded text-sm text-white transition-colors ${
+                  isLoading 
+                    ? `${model === 'leashed' ? 'bg-blue-400' : 'bg-red-400'} cursor-not-allowed` 
+                    : model === 'leashed'
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                Teach me {model === 'leashed' ? '😇' : '😈'}
+              </button>
+            </div>
+
+            {/* Message history */}
             {displayMessages.map((m, idx) => {
               const isAssistant = m.role === "assistant";
               const isLeashed = m.modelUsed === "leashed";
@@ -213,30 +238,59 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
             )}
           </div>
 
-          {/* Input box */}
-          <div className="p-3 border-t border-gray-300 flex items-center space-x-2">
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about this block..."
-              className="flex-1 p-2 border rounded text-sm min-h-[40px] max-h-[120px] resize-y"
-              rows={1}
-              disabled={isLoading}
-            />
-            <button
-              onClick={handleSend}
-              className={`px-3 py-2 rounded text-white ${
-                isLoading 
-                  ? `${model === 'leashed' ? 'bg-blue-400' : 'bg-red-400'} cursor-not-allowed` 
-                  : model === 'leashed'
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-red-600 hover:bg-red-700'
-              }`}
-              disabled={isLoading}
-            >
-              Send
-            </button>
+          {/* Input area */}
+          <div className="border-t border-gray-300">
+            {/* Message input */}
+            <div className="p-3 flex items-center space-x-2">
+              <textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about this section..."
+                className="flex-1 p-2 border rounded text-sm min-h-[40px] max-h-[120px] resize-y"
+                rows={1}
+                disabled={isLoading}
+              />
+              <button
+                onClick={handleInputSend}
+                className={`px-3 py-2 rounded text-white ${
+                  isLoading 
+                    ? `${model === 'leashed' ? 'bg-blue-400' : 'bg-red-400'} cursor-not-allowed` 
+                    : model === 'leashed'
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                }`}
+                disabled={isLoading}
+              >
+                Send
+              </button>
+            </div>
+
+            {/* Model toggle switch */}
+            <div className="px-3 pb-3">
+              <label className="flex items-center justify-center cursor-pointer">
+                <span className={`mr-2 text-sm ${model === 'leashed' ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
+                  Leashed 😇
+                </span>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={model === 'unhinged'}
+                    onChange={() => setModel(m => m === 'leashed' ? 'unhinged' : 'leashed')}
+                  />
+                  <div className={`block w-14 h-8 rounded-full transition-colors duration-300 ${
+                    model === 'leashed' ? 'bg-blue-600' : 'bg-red-600'
+                  }`}></div>
+                  <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 ${
+                    model === 'unhinged' ? 'translate-x-6' : 'translate-x-0'
+                  }`}></div>
+                </div>
+                <span className={`ml-2 text-sm ${model === 'unhinged' ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                  Unhinged 😈
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       ) : (

@@ -171,6 +171,8 @@ export default function PDFViewer() {
               const h = Math.max(...b.polygon.map((p) => p[1])) - y;
 
               const isSelected = selectedBlock?.id === b.id;
+              const isTextType = b.block_type.toLowerCase() === "text";
+
               const style = {
                 position: "absolute" as const,
                 left: `${x * scale}px`,
@@ -178,9 +180,7 @@ export default function PDFViewer() {
                 width: `${w * scale}px`,
                 height: `${h * scale}px`,
                 backgroundColor: "transparent",
-                border: isSelected
-                  ? "2px solid rgba(0, 120, 255, 0.8)"
-                  : "1px solid rgba(0, 0, 255, 0.6)",
+                border: `1px solid ${isTextType ? "rgba(0, 0, 255, 0.6)" : "transparent"}`,
                 cursor: "pointer",
                 transition: "all 0.2s ease-in-out",
                 zIndex: isSelected ? 2 : 1,
@@ -201,7 +201,7 @@ export default function PDFViewer() {
     [blocks, selectedBlock, handleBlockClick]
   );
 
-  const textBlockTypes = ["text", "sectionheader", "list", "footnote"];
+  const textBlockTypes = ["text"];
   const isTextBlock = selectedBlock?.block_type && textBlockTypes.includes(selectedBlock.block_type.toLowerCase());
 
   return (
