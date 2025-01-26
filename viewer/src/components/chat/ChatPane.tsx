@@ -35,7 +35,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   const [model, setModel] = useState<DobbyModel>('leashed');
   
   // State for tracking width
-  const [width, setWidth] = useState(480); // Increased from 384px to 480px
+  const [width, setWidth] = useState(500); // Increased from 384px to 480px
   const [isResizing, setIsResizing] = useState(false);
 
   // Update block conversations whenever messages change
@@ -91,7 +91,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       // 1. Get Unhinged Dobby's thoughts
       const unhingedSystemPrompt: Message = {
         role: "system",
-        content: "You are Unhinged Dobby 😈. Share your unfiltered thoughts about this text!",
+        content: "You are Unhinged Dobby 😈. Debate Leashed Dobby about this text!",
       };
 
       const unhingedResponse = await callFireworksAI(
@@ -202,7 +202,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       {/* Header */}
       <div className="p-3 flex items-center justify-between bg-gray-200 border-b border-gray-300">
         <div className="flex items-center gap-3">
-          <h2 className="font-semibold">Learn with Dobby</h2>
+          <h2 className="font-semibold">Read with Dobby</h2>
         </div>
         <button onClick={onClose} className="text-sm text-gray-700 hover:text-black">
           ✕
@@ -228,7 +228,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
             {/* Preset message buttons */}
             <div className="flex gap-2 mb-4">
               <button
-                onClick={() => handleSend("Summarize this")}
+                onClick={() => handleSend("Summarize this briefly")}
                 disabled={isLoading}
                 className={`px-3 py-1.5 rounded text-sm text-white transition-colors ${
                   isLoading 
