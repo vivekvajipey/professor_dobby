@@ -1,7 +1,7 @@
 export type DobbyModel = 'leashed' | 'unhinged';
 
 export type Message = {
-  role: 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant';
   content: string;
   modelUsed?: DobbyModel;
 };
@@ -10,6 +10,11 @@ const MODEL_IDS = {
   leashed: "accounts/sentientfoundation/models/dobby-mini-leashed-llama-3-1-8b#accounts/sentientfoundation/deployments/22e7b3fd",
   unhinged: "accounts/sentientfoundation/models/dobby-mini-unhinged-llama-3-1-8b#accounts/sentientfoundation/deployments/81e155fc"
 };
+
+// Strip HTML tags from text
+export function stripHtml(htmlString: string): string {
+  return htmlString.replace(/<[^>]*>/g, "");
+}
 
 // Strip modelUsed from messages before sending to API
 function stripModelUsed(messages: Message[]): { role: string; content: string }[] {

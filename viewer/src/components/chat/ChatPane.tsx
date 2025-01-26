@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Block } from "../pdf/PDFViewer";
-import { callFireworksAI, type Message, type DobbyModel } from "@/utils/fireworks";
+import { callFireworksAI, type Message, type DobbyModel, stripHtml } from "@/utils/fireworks";
 
 // Global state to store conversations per block
 const blockConversations: { [blockId: string]: Message[] } = {};
@@ -13,9 +13,19 @@ interface ChatPaneProps {
 }
 
 export default function ChatPane({ block, onClose }: ChatPaneProps) {
-  // Initialize messages from block conversation history or empty array
+  // Initialize messages from block conversation history or create new with system message
   const [messages, setMessages] = useState<Message[]>(() => {
-    return blockConversations[block.id] || [];
+    if (!blockConversations[block.id]) {
+      blockConversations[block.id] = [
+        {
+          role: "system",
+          content: `You are an AI assistant that helps the user analyze PDF blocks. The user is focusing on this block of text:\n\n${stripHtml(
+            block.html
+          )}\n\nUse this information for context when answering questions.`,
+        },
+      ];
+    }
+    return blockConversations[block.id];
   });
 
   // The current user-typed message
@@ -114,6 +124,9 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     };
   }, [isResizing]);
 
+  // Filter out system messages for display
+  const displayMessages = messages.filter(m => m.role !== 'system');
+
   return (
     <div 
       style={{ width: `${width}px` }}
@@ -137,7 +150,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
                 : 'bg-red-100 text-red-700 hover:bg-red-200'
             }`}
           >
-            {model === 'leashed' ? 'Dobby 😇' : 'Unhinged 😈'}
+            {model === 'leashed' ? 'Dobby 😇' : 'Dobby 😈'}
           </button>
         </div>
         <button onClick={onClose} className="text-sm text-gray-700 hover:text-black">
@@ -161,7 +174,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
         <div className="flex-1 flex flex-col min-h-0">
           {/* Messages */}
           <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-0">
-            {messages.map((m, idx) => {
+            {displayMessages.map((m, idx) => {
               const isAssistant = m.role === "assistant";
               const isLeashed = m.modelUsed === "leashed";
               let bubbleClasses = "";
