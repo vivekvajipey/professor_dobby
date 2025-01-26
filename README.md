@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 3. Create a `.env` file in the `backend` directory:
 ```env
-OPENAI_API_KEY=your_openai_api_key
+DATALAB_API_KEY=your_openai_api_key
 ```
 
 4. Start the backend server:
