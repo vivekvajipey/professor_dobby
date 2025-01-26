@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Block } from "../pdf/PDFViewer";
 import { callFireworksAI, type Message, type DobbyModel, stripHtml } from "@/utils/fireworks";
+import { ElevenLabsClient } from "elevenlabs";
 
 // Global state to store conversations per block
 const blockConversations: { [blockId: string]: Message[] } = {};
@@ -13,6 +14,11 @@ interface ChatPaneProps {
 }
 
 export default function ChatPane({ block, onClose }: ChatPaneProps) {
+  // Initialize ElevenLabs client
+  const elevenClient = new ElevenLabsClient({
+    apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY || "",
+  });
+
   // Initialize messages from block conversation history or create new with system message
   const [messages, setMessages] = useState<Message[]>(() => {
     if (!blockConversations[block.id]) {
@@ -28,6 +34,9 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     return blockConversations[block.id];
   });
 
+  // Track which message is currently being spoken
+  const [speakingMessageId, setSpeakingMessageId] = useState<number | null>(null);
+
   // The current user-typed message
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,13 +44,78 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   const [model, setModel] = useState<DobbyModel>('leashed');
   
   // State for tracking width
-  const [width, setWidth] = useState(500); // Increased from 384px to 480px
+  const [width, setWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
 
   // Update block conversations whenever messages change
   useEffect(() => {
     blockConversations[block.id] = messages;
   }, [messages, block.id]);
+
+  /**
+   * Generate and play TTS audio for an assistant message using ElevenLabs
+   */
+  const handleSpeak = async (msg: Message, messageId: number) => {
+    if (msg.role !== "assistant") return;
+
+    try {
+      setSpeakingMessageId(messageId);
+
+      // Use different voices for leashed vs unhinged Dobby
+      const voiceId = msg.modelUsed === 'leashed' 
+        ? "ThT5KcBeYPX3keUQqHPh" // Charlie (cheerful)
+        : "VR6AewLTigWG4xSOukaG"; // Adam (deep)
+
+      const audioStream = await elevenClient.textToSpeech.convertAsStream(voiceId, {
+        text: msg.content,
+        model_id: "eleven_multilingual_v2",
+      });
+
+      // Gather the streamed chunks
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of audioStream) {
+        chunks.push(chunk);
+      }
+
+      // Combine chunks into a Blob
+      const blob = new Blob(chunks, { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+
+      // Create and play audio
+      const audio = new Audio(url);
+      
+      // Set up event handlers before playing
+      audio.onended = () => {
+        setSpeakingMessageId(null);
+        URL.revokeObjectURL(url);
+      };
+
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        setSpeakingMessageId(null);
+        URL.revokeObjectURL(url);
+      };
+
+      // Try to play the audio with error handling
+      try {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error("Playback failed:", error);
+            setSpeakingMessageId(null);
+            URL.revokeObjectURL(url);
+          });
+        }
+      } catch (playError) {
+        console.error("Play error:", playError);
+        setSpeakingMessageId(null);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Error generating TTS audio:", err);
+      setSpeakingMessageId(null);
+    }
+  };
 
   const handleSend = async (messageText: string) => {
     if (!messageText.trim() || isLoading) return;
@@ -156,7 +230,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     if (!isResizing) return;
     const newWidth = window.innerWidth - e.clientX;
     // Updated min/max width constraints
-    setWidth(Math.min(Math.max(400, newWidth), 800)); // Increased min from 320 to 400, max from 640 to 800
+    setWidth(Math.min(Math.max(400, newWidth), 800)); 
   };
 
   const handleMouseUp = () => {
@@ -282,13 +356,32 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
                 label = "You";
               }
 
+              const isSpeaking = speakingMessageId === idx;
+
               return (
                 <div
                   key={idx}
                   className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <div className={`${bubbleClasses} p-2 rounded text-sm max-w-[80%]`}>
-                    <strong>{label}:</strong> {m.content}
+                  <div className={`${bubbleClasses} p-2 rounded text-sm max-w-[80%] flex flex-col gap-1`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <strong>{label}:</strong>
+                      {isAssistant && (
+                        <button
+                          onClick={() => handleSpeak(m, idx)}
+                          disabled={speakingMessageId !== null}
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            isSpeaking
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'hover:bg-gray-100'
+                          }`}
+                          title={isSpeaking ? "Speaking..." : "Play message"}
+                        >
+                          {isSpeaking ? '🔊 Speaking...' : '🎤 Play'}
+                        </button>
+                      )}
+                    </div>
+                    <div>{m.content}</div>
                   </div>
                 </div>
               );
