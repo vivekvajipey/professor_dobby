@@ -4,7 +4,7 @@ Read with Dobby transforms your reading experience by pairing every passage with
 
 ## Demo Video
 
-Check out our demo video to see Read with Dobby in action:
+Check out the demo video to see Read with Dobby in action:
 
 [![Read with Dobby Demo](https://img.youtube.com/vi/bLQk0J_F2q0/0.jpg)](https://www.youtube.com/watch?v=bLQk0J_F2q0)
 
