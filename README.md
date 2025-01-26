@@ -14,7 +14,6 @@ Check out the demo video to see Read with Dobby in action:
 
 1. Clone the repository:
 
-
 ## Features
 
 - **Interactive PDF Viewer**: View and navigate PDFs with ease
@@ -97,15 +96,15 @@ professor_dobby/
 ├── backend/                # FastAPI backend server
 │   ├── app.py             # Main server application
 │   ├── requirements.txt   # Python dependencies
-│   └── .env              # Backend environment variables
+│   └── .env               # Backend environment variables
 │
 └── viewer/                # Next.js frontend
     ├── src/
-    │   ├── app/          # Next.js app router
+    │   ├── app/           # Next.js app router
     │   ├── components/
-    │   │   ├── chat/     # Chat interface components
+    │   │   ├── chat/      # Chat interface components
     │   │   │   └── ChatPane.tsx
-    │   │   └── pdf/      # PDF viewer components
+    │   │   └── pdf/       # PDF viewer components
     │   │       ├── PDFViewer.tsx
     │   │       └── PDFViewerWrapper.tsx
     │   └── utils/
@@ -130,4 +129,18 @@ professor_dobby/
 2. Click on any text block in the PDF to start a conversation
 3. Choose between Leashed and Unhinged Dobby using the toggle
 4. Use preset buttons for quick actions or type custom questions
-5. Click the "Dobby vs. Dobby" button to see both personalities debate
+5. Click the "Dobby vs. Dobby" button to see both personalities debate about the text
+
+## Roadmap
+
+- **Full Voice Conversation**:
+  - Integrate speech recognition so users can speak their questions
+  - Finalize text-to-speech so Dobby can read every response aloud  
+- **Enhanced Interactivity**:
+  - Expanded tools for highlighting, annotating, and exploring PDF content
+- **More Fleshed-Out Debates**:
+  - Improved back-and-forth between Leashed and Unhinged Dobby for richer “Dobby vs. Dobby”
+- **Note-Taking Functionality**:
+  - Let users save or export key insights, highlights, and chat logs
+- **Internet Search Integration**:
+  - Allow Dobby to reference the web for up-to-date info or deeper context
