@@ -1,4 +1,4 @@
-# Read with Dobby - AI-Powered PDF Reader
+# Read with Dobby
 
 Read with Dobby transforms your reading experience by pairing every passage with Dobby’s insightful commentary—whether you prefer a calm, “leashed” perspective or a wild, “unhinged” debate partner. Boring or dense materials turn fun and interactive as you dive into conversational summaries, clarifications, and even playful arguments between Dobby’s two sides. It’s a fresh way to learn, simplify complex topics, and stay engaged with whatever you’re reading!
 
