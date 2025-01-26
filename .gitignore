@@ -108,3 +108,4 @@ viewer/backend/temp_uploads/
 viewer/backend/__pycache__/
 viewer/backend/venv/
 viewer/backend/.env
+viewer/backend/dobby.ipynb

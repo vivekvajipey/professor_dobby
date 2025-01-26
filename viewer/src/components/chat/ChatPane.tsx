@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Block } from "../pdf/PDFViewer";
 
 interface ChatPaneProps {
@@ -20,6 +20,39 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
   // The current user-typed message
   const [newMessage, setNewMessage] = useState("");
 
+  // State for tracking width
+  const [width, setWidth] = useState(384); // 384px = w-96 default
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Handle mouse events for resizing
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const newWidth = window.innerWidth - e.clientX;
+    // Constrain width between 320px and 640px
+    setWidth(Math.min(Math.max(320, newWidth), 640));
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  // Cleanup event listeners
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   const handleSend = () => {
     if (!newMessage.trim()) return;
 
@@ -35,11 +68,31 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     setNewMessage("");
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Allow new line with Shift+Enter
+        return;
+      }
+      // Submit with just Enter
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   // A simple check for a text-type block
   const blockIsText = block.block_type.toLowerCase().includes("text");
 
   return (
-    <div className="w-96 bg-white text-gray-800 border-l border-gray-300 flex flex-col">
+    <div 
+      style={{ width: `${width}px` }}
+      className="bg-white text-gray-800 border-l border-gray-300 flex flex-col h-full relative"
+    >
+      {/* Resize handle */}
+      <div
+        className="absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 hover:opacity-50"
+        onMouseDown={handleMouseDown}
+      />
       {/* Header */}
       <div className="p-3 flex items-center justify-between bg-gray-200 border-b border-gray-300">
         <h2 className="font-semibold">Block Chat</h2>
@@ -65,30 +118,35 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
 
       {/* Chat area */}
       {blockIsText ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Messages */}
-          <div className="flex-1 p-3 overflow-auto space-y-3">
+          <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-0">
             {messages.map((m, idx) => (
               <div
                 key={idx}
-                className={
-                  m.role === "assistant"
-                    ? "bg-blue-100 text-gray-800 p-2 rounded text-sm max-w-[80%]"
-                    : "bg-gray-700 text-white p-2 rounded text-sm self-end max-w-[80%]"
-                }
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <strong>{m.role === "assistant" ? "AI" : "You"}:</strong> {m.content}
+                <div
+                  className={
+                    m.role === "assistant"
+                      ? "bg-blue-100 text-gray-800 p-2 rounded text-sm max-w-[80%]"
+                      : "bg-gray-700 text-white p-2 rounded text-sm max-w-[80%]"
+                  }
+                >
+                  <strong>{m.role === "assistant" ? "AI" : "You"}:</strong> {m.content}
+                </div>
               </div>
             ))}
           </div>
           {/* Input box */}
           <div className="p-3 border-t border-gray-300 flex items-center space-x-2">
-            <input
-              type="text"
+            <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Ask about this block..."
-              className="flex-1 p-2 border rounded text-sm"
+              className="flex-1 p-2 border rounded text-sm min-h-[40px] max-h-[120px] resize-y"
+              rows={1}
             />
             <button
               onClick={handleSend}
