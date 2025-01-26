@@ -1,15 +1,29 @@
+export type DobbyModel = 'leashed' | 'unhinged';
+
 export type Message = {
   role: 'user' | 'assistant';
   content: string;
+  modelUsed?: DobbyModel;
 };
+
+const MODEL_IDS = {
+  leashed: "accounts/sentientfoundation/models/dobby-mini-leashed-llama-3-1-8b#accounts/sentientfoundation/deployments/22e7b3fd",
+  unhinged: "accounts/sentientfoundation/models/dobby-mini-unhinged-llama-3-1-8b#accounts/sentientfoundation/deployments/81e155fc"
+};
+
+// Strip modelUsed from messages before sending to API
+function stripModelUsed(messages: Message[]): { role: string; content: string }[] {
+  return messages.map(({ role, content }) => ({ role, content }));
+}
 
 export async function callFireworksAI(
   apiKey: string,
-  messages: Message[]
+  messages: Message[],
+  model: DobbyModel = 'leashed'
 ): Promise<string> {
   const body = {
-    model: "accounts/sentientfoundation/models/dobby-mini-leashed-llama-3-1-8b#accounts/sentientfoundation/deployments/22e7b3fd",
-    messages,
+    model: MODEL_IDS[model],
+    messages: stripModelUsed(messages),
   };
 
   try {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Block } from "../pdf/PDFViewer";
-import { callFireworksAI, type Message } from "@/utils/fireworks";
+import { callFireworksAI, type Message, type DobbyModel } from "@/utils/fireworks";
 
 // Global state to store conversations per block
 const blockConversations: { [blockId: string]: Message[] } = {};
@@ -13,21 +13,15 @@ interface ChatPaneProps {
 }
 
 export default function ChatPane({ block, onClose }: ChatPaneProps) {
-  // Initialize messages from block conversation history or with default message
+  // Initialize messages from block conversation history or empty array
   const [messages, setMessages] = useState<Message[]>(() => {
-    return (
-      blockConversations[block.id] || [
-        {
-          role: "assistant",
-          content: "Hello! I'm your AI helper. Ask me something about the block below.",
-        },
-      ]
-    );
+    return blockConversations[block.id] || [];
   });
 
   // The current user-typed message
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [model, setModel] = useState<DobbyModel>('leashed');
   
   // State for tracking width
   const [width, setWidth] = useState(384); // 384px = w-96 default
@@ -56,10 +50,14 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       }
 
       // Call Fireworks AI with the entire conversation
-      const aiResponse = await callFireworksAI(apiKey, [...messages, userMsg]);
+      const aiResponse = await callFireworksAI(apiKey, [...messages, userMsg], model);
       
-      // Add AI response to messages
-      const aiMsg: Message = { role: "assistant", content: aiResponse };
+      // Add AI response to messages with the current model
+      const aiMsg: Message = { 
+        role: "assistant", 
+        content: aiResponse,
+        modelUsed: model
+      };
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
       console.error("Error getting AI response:", error);
@@ -67,6 +65,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       const errorMsg: Message = {
         role: "assistant",
         content: "Sorry, I encountered an error. Please try again.",
+        modelUsed: model
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
@@ -115,9 +114,6 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     };
   }, [isResizing]);
 
-  // A simple check for a text-type block
-  const blockIsText = block.block_type.toLowerCase().includes("text");
-
   return (
     <div 
       style={{ width: `${width}px` }}
@@ -131,7 +127,19 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
 
       {/* Header */}
       <div className="p-3 flex items-center justify-between bg-gray-200 border-b border-gray-300">
-        <h2 className="font-semibold">Block Chat</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-semibold">Block Chat</h2>
+          <button
+            onClick={() => setModel(m => m === 'leashed' ? 'unhinged' : 'leashed')}
+            className={`px-2 py-1 rounded text-sm transition-colors ${
+              model === 'leashed' 
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                : 'bg-red-100 text-red-700 hover:bg-red-200'
+            }`}
+          >
+            {model === 'leashed' ? 'Dobby 😇' : 'Unhinged 😈'}
+          </button>
+        </div>
         <button onClick={onClose} className="text-sm text-gray-700 hover:text-black">
           ✕
         </button>
@@ -149,30 +157,44 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       </div>
 
       {/* Chat area */}
-      {blockIsText ? (
+      {block.block_type.toLowerCase().includes("text") ? (
         <div className="flex-1 flex flex-col min-h-0">
           {/* Messages */}
           <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-0">
-            {messages.map((m, idx) => (
-              <div
-                key={idx}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+            {messages.map((m, idx) => {
+              const isAssistant = m.role === "assistant";
+              const isLeashed = m.modelUsed === "leashed";
+              let bubbleClasses = "";
+              let label = "";
+
+              if (isAssistant) {
+                if (isLeashed) {
+                  bubbleClasses = "bg-blue-100 text-gray-800";
+                  label = "Dobby 😇";
+                } else {
+                  bubbleClasses = "bg-red-100 text-gray-800";
+                  label = "Dobby 😈";
+                }
+              } else {
+                bubbleClasses = "bg-gray-700 text-white";
+                label = "You";
+              }
+
+              return (
                 <div
-                  className={
-                    m.role === "assistant"
-                      ? "bg-blue-100 text-gray-800 p-2 rounded text-sm max-w-[80%]"
-                      : "bg-gray-700 text-white p-2 rounded text-sm max-w-[80%]"
-                  }
+                  key={idx}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <strong>{m.role === "assistant" ? "AI" : "You"}:</strong> {m.content}
+                  <div className={`${bubbleClasses} p-2 rounded text-sm max-w-[80%]`}>
+                    <strong>{label}:</strong> {m.content}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-blue-100 text-gray-800 p-2 rounded text-sm">
-                  <em>AI is typing...</em>
+                <div className={`${model === 'leashed' ? 'bg-blue-100' : 'bg-red-100'} text-gray-800 p-2 rounded text-sm`}>
+                  <em>{model === 'leashed' ? 'Dobby' : 'Unhinged'} is typing...</em>
                 </div>
               </div>
             )}
@@ -192,7 +214,11 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
             <button
               onClick={handleSend}
               className={`px-3 py-2 rounded text-white ${
-                isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                isLoading 
+                  ? `${model === 'leashed' ? 'bg-blue-400' : 'bg-red-400'} cursor-not-allowed` 
+                  : model === 'leashed'
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-red-600 hover:bg-red-700'
               }`}
               disabled={isLoading}
             >
