@@ -24,6 +24,34 @@ Before running the app, make sure you have:
 
 ## Installation
 
+### Backend Setup
+
+1. Set up Python virtual environment:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+```
+
+2. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Create a `.env` file in the `backend` directory:
+```env
+OPENAI_API_KEY=your_openai_api_key
+```
+
+4. Start the backend server:
+```bash
+uvicorn app:app --reload
+```
+
+The backend server will run on [http://localhost:8000](http://localhost:8000)
+
+### Frontend Setup
+
 1. Clone the repository:
 ```bash
 git clone https://github.com/yourusername/professor_dobby.git
@@ -52,19 +80,25 @@ npm run dev
 ## Project Structure
 
 ```
-viewer/
-├── src/
-│   ├── app/                 # Next.js app router
-│   ├── components/
-│   │   ├── chat/           # Chat interface components
-│   │   │   └── ChatPane.tsx
-│   │   └── pdf/            # PDF viewer components
-│   │       ├── PDFViewer.tsx
-│   │       └── PDFViewerWrapper.tsx
-│   └── utils/
-│       └── fireworks.ts    # AI API integration
-├── public/                 # Static files
-└── package.json
+professor_dobby/
+├── backend/                # FastAPI backend server
+│   ├── app.py             # Main server application
+│   ├── requirements.txt   # Python dependencies
+│   └── .env              # Backend environment variables
+│
+└── viewer/                # Next.js frontend
+    ├── src/
+    │   ├── app/          # Next.js app router
+    │   ├── components/
+    │   │   ├── chat/     # Chat interface components
+    │   │   │   └── ChatPane.tsx
+    │   │   └── pdf/      # PDF viewer components
+    │   │       ├── PDFViewer.tsx
+    │   │       └── PDFViewerWrapper.tsx
+    │   └── utils/
+    │       └── fireworks.ts    # AI API integration
+    ├── public/           # Static files
+    └── package.json
 ```
 
 ## Key Components
