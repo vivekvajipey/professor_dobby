@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import type { Block } from "../pdf/PDFViewer";
+import { callFireworksAI, type Message } from "@/utils/fireworks";
+
+// Global state to store conversations per block
+const blockConversations: { [blockId: string]: Message[] } = {};
 
 interface ChatPaneProps {
   block: Block;
@@ -9,20 +13,66 @@ interface ChatPaneProps {
 }
 
 export default function ChatPane({ block, onClose }: ChatPaneProps) {
-  // A list of chat messages (role + content).
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([
-    {
-      role: "assistant",
-      content: "Hello! I'm your AI helper. Ask me something about the block below.",
-    },
-  ]);
+  // Initialize messages from block conversation history or with default message
+  const [messages, setMessages] = useState<Message[]>(() => {
+    return (
+      blockConversations[block.id] || [
+        {
+          role: "assistant",
+          content: "Hello! I'm your AI helper. Ask me something about the block below.",
+        },
+      ]
+    );
+  });
 
   // The current user-typed message
   const [newMessage, setNewMessage] = useState("");
-
+  const [isLoading, setIsLoading] = useState(false);
+  
   // State for tracking width
   const [width, setWidth] = useState(384); // 384px = w-96 default
   const [isResizing, setIsResizing] = useState(false);
+
+  // Update block conversations whenever messages change
+  useEffect(() => {
+    blockConversations[block.id] = messages;
+  }, [messages, block.id]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || isLoading) return;
+
+    const userMsg: Message = { role: "user", content: newMessage };
+    
+    // Immediately show user message and clear input
+    setMessages(prev => [...prev, userMsg]);
+    setNewMessage("");
+    setIsLoading(true);
+
+    try {
+      // Get API key from environment variable
+      const apiKey = process.env.NEXT_PUBLIC_FIREWORKS_API_KEY;
+      if (!apiKey) {
+        throw new Error("Missing Fireworks API key");
+      }
+
+      // Call Fireworks AI with the entire conversation
+      const aiResponse = await callFireworksAI(apiKey, [...messages, userMsg]);
+      
+      // Add AI response to messages
+      const aiMsg: Message = { role: "assistant", content: aiResponse };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      // Show error message in chat
+      const errorMsg: Message = {
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please try again.",
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle mouse events for resizing
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -45,29 +95,6 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
     document.removeEventListener('mouseup', handleMouseUp);
   };
 
-  // Cleanup event listeners
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
-
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
-
-    // Add the user's message
-    const userMsg = { role: "user", content: newMessage };
-    // Add a placeholder AI response
-    const aiMsg = {
-      role: "assistant",
-      content: "This is a placeholder response about the block content.",
-    };
-
-    setMessages((prev) => [...prev, userMsg, aiMsg]);
-    setNewMessage("");
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
       if (e.shiftKey) {
@@ -79,6 +106,14 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       handleSend();
     }
   };
+
+  // Cleanup event listeners
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   // A simple check for a text-type block
   const blockIsText = block.block_type.toLowerCase().includes("text");
@@ -93,6 +128,7 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
         className="absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 hover:opacity-50"
         onMouseDown={handleMouseDown}
       />
+
       {/* Header */}
       <div className="p-3 flex items-center justify-between bg-gray-200 border-b border-gray-300">
         <h2 className="font-semibold">Block Chat</h2>
@@ -104,10 +140,6 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
       {/* Block Content Display */}
       <div className="p-3 border-b border-gray-300">
         <h3 className="font-semibold mb-2">Block Content</h3>
-        {/* 
-            1) Make text darker (text-gray-900) 
-            2) Add 'resize-y' plus overflow-auto so the user can drag to make it taller/shorter
-        */}
         <div
           className="p-2 bg-gray-50 text-gray-900 rounded text-sm 
                      overflow-auto resize-y 
@@ -137,7 +169,15 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-blue-100 text-gray-800 p-2 rounded text-sm">
+                  <em>AI is typing...</em>
+                </div>
+              </div>
+            )}
           </div>
+
           {/* Input box */}
           <div className="p-3 border-t border-gray-300 flex items-center space-x-2">
             <textarea
@@ -147,17 +187,20 @@ export default function ChatPane({ block, onClose }: ChatPaneProps) {
               placeholder="Ask about this block..."
               className="flex-1 p-2 border rounded text-sm min-h-[40px] max-h-[120px] resize-y"
               rows={1}
+              disabled={isLoading}
             />
             <button
               onClick={handleSend}
-              className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
+              className={`px-3 py-2 rounded text-white ${
+                isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              disabled={isLoading}
             >
               Send
             </button>
           </div>
         </div>
       ) : (
-        // If not text, we can show a different UI or a placeholder message
         <div className="p-3 text-gray-700">
           This block is not recognized as a text block.
         </div>
